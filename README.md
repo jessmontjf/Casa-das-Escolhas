@@ -15,6 +15,16 @@ Um RPG curtinho, em tons quentes e pastéis. Fluxo completo:
 8. **A casa no campo**: 5 escolhas. O "Arquiteto" (Claude) tenta prever cada escolha e põe o palpite no meio.
 9. **Final**: se aceitar o item, vem o resultado de teste de personalidade. Se recusar, aparece um gato com um sininho e o jogo fecha.
 
+## Direção de arte (v3)
+- **Personagem**: sprite de RPG top-down, com 4 direções × 3 quadros (parado, passo, passo) numa grade de 20×28 px (`sprites.py`). O protagonista tem rosto e porte neutros, cabelo curto em camadas e franja.
+- **Roupas** (3×3×3 = 27 combinações), em estilo streetwear casual:
+  - Parte de cima: moletom azul com manga longa por baixo, polo listrada ou jaqueta cinza de zíper.
+  - Parte de baixo: bermuda jeans larga, short de moletom ou calça esportiva larga com friso.
+  - Sapatos: tênis marinho com meia, mocassim com meião ou tênis bordô.
+- **Exterior**: riacho com cascata, ponte de madeira, caminho de terra, horta cercada, plantação de feno e poucas árvores. A casa é de enxaimel com telhado de telhas verde-escuras.
+- **Interior**: piso de tábuas (linhas regulares, emendas espalhadas, 2º tom e frestas), cômodos emoldurados por escuro e luz quente.
+- **Paleta única**: o mundo inteiro é remapeado pra uma paleta de ~65 cores quentes e aconchegantes, com uma luz de lamparina por cima (`pixel.PALETTE`). Para isso o jogo usa `numpy`.
+
 ## Visual em pixel art
 - Tudo é desenhado numa grade de **3 px por pixel** (`pixel.py`). Os sprites (personagens, itens, árvores, pedras, mãos) são feitos em tamanho pequeno, ganham contorno de 1 px e são ampliados sem suavizar.
 - A grama segue a técnica: base → manchas escuras → tufos → florzinhas. As pedras seguem: base → rachaduras → luz → musgo → contorno.
@@ -60,7 +70,7 @@ Coloque PNGs em `assets/`. Se um arquivo existe, ele substitui o desenho feito p
 
 - **Cenários:** `bg_correio`, `bg_quarto`, `bg_corredor`, `bg_terreo` (960×640) e `bg_bairro` (3200×640).
 - **Quadros da história:** `cut_dormindo`, `cut_acordando`, `cut_sentado`, `cut_banho`, `cut_pronto`, `cut_lembranca`, `cut_cafe`, `cut_satisfeito` (960×640).
-- **Protagonista:** `player_idle_down`, `player_walk_down`, e o mesmo para `up`, `left` e `right`. São tiras horizontais de quadros.
+- **Protagonista:** `player_idle_down`, `player_walk_down`, e o mesmo para `up`, `left` e `right`. São tiras horizontais de quadros (o desenho atual usa 3 quadros por direção, em 20×28 px).
 - **Quantidade de quadros e velocidade:** se precisar, defina em `assets/manifest.json`, por exemplo `{"player_walk_down": {"frames": 4, "fps": 8}}`.
 - **Música:** `assets/music/tema.ogg`.
 

@@ -211,7 +211,7 @@ class Cutscene:
             return
         fr = self.frames[self.i]
         fr["draw"](self.canvas, self.t)
-        pixel.pixelate(self.canvas)
+        pixel.pixelate(self.canvas, grade=True)
         cap = fr.get("caption")
         if cap:
             r = pygame.Rect(70, H - 118, W - 140, 86)

@@ -26,10 +26,17 @@ def up(small):
     return pygame.transform.scale(small, (small.get_width() * P, small.get_height() * P))
 
 
-def pixelate(surf, rect=None):
-    """Re-amostra a tela na grade de P px (deixa tudo 'pixel')."""
+GRADE = (232, 204, 172)      # luz quente de fim de tarde / lamparina
+
+
+def pixelate(surf, rect=None, grade=False):
+    """Re-amostra a tela na grade de P px (deixa tudo 'pixel').
+    grade=True também aplica a luz quente e aconchegante do mundo."""
     if rect is None:
         small = pygame.transform.scale(surf, (LW, LH))
+        if grade:
+            small.fill(GRADE, special_flags=pygame.BLEND_RGB_MULT)
+            _palette().apply(small)
         surf.blit(pygame.transform.scale(small, (LW * P, LH * P)), (0, 0))
     else:
         r = pygame.Rect(snap(rect.x), snap(rect.y), snap(rect.w + P - 1), snap(rect.h + P - 1)).clip(surf.get_rect())
@@ -352,3 +359,72 @@ class CRT:
             ov.fill((4, 3, 3))
             surf.blit(ov, (0, 0), special_flags=pygame.BLEND_RGB_SUB)
         surf.blit(self.frame, (0, 0))
+
+
+# ============================================================ paleta única (tons quentes e aconchegantes)
+PALETTE = [
+    (11, 6, 9), (25, 16, 18), (40, 28, 26), (47, 17, 13), (64, 30, 22), (64, 39, 28), (86, 37, 24),
+    (59, 58, 36), (88, 50, 31), (101, 50, 33), (106, 66, 32), (123, 52, 30), (105, 66, 52), (119, 69, 36),
+    (127, 69, 40), (145, 68, 39), (120, 86, 57), (135, 80, 52), (149, 86, 53), (137, 94, 64), (150, 99, 66),
+    (159, 98, 59), (165, 102, 64), (137, 119, 76), (178, 101, 59), (161, 122, 86), (178, 119, 80),
+    (159, 138, 96), (193, 124, 77), (203, 139, 93), (172, 157, 113), (219, 160, 109), (221, 189, 138),
+    (240, 223, 171), (250, 240, 214), (255, 232, 170), (252, 206, 120), (238, 140, 82), (214, 96, 62),
+    (176, 64, 48), (226, 150, 130), (206, 140, 130), (168, 96, 104), (236, 184, 142), (246, 210, 170),
+    (52, 78, 58), (74, 104, 66), (102, 132, 76), (138, 160, 90), (176, 186, 110), (44, 92, 86),
+    (70, 124, 110), (110, 156, 138), (44, 52, 80), (60, 96, 120), (96, 140, 156), (150, 190, 190),
+    (74, 112, 178), (186, 150, 196), (130, 104, 140), (90, 82, 86), (120, 110, 106), (150, 140, 130),
+    (176, 172, 172), (196, 186, 172), (138, 40, 50),
+]
+
+
+_PAL = None
+
+
+def _palette():
+    global _PAL
+    if _PAL is None:
+        _PAL = Palette()
+    return _PAL
+
+
+class Palette:
+    """Remapeia a tela inteira pra paleta do jogo.
+    Com numpy: tabela 32×32×32 → cor mais próxima (preciso).
+    Sem numpy: usa o mapeamento de 8 bits do SDL (mais grosseiro)."""
+
+    def __init__(self, colors=PALETTE):
+        self.colors = list(colors) + [(0, 0, 0)] * (256 - len(colors))
+        self.p8 = None
+        self.np = None
+        try:
+            import numpy as np
+            import pygame.surfarray  # noqa: F401
+            pal = np.array(colors, dtype=np.int32)
+            lv = np.arange(32) * 8 + 4
+            r, g, b = np.meshgrid(lv, lv, lv, indexing="ij")
+            grid = np.stack([r, g, b], -1).reshape(-1, 1, 3)
+            wts = np.array([3, 4, 2])
+            best = np.empty(grid.shape[0], dtype=np.int32)
+            for i in range(0, grid.shape[0], 4096):
+                d = (((grid[i:i + 4096] - pal[None]) ** 2) * wts).sum(-1)
+                best[i:i + 4096] = d.argmin(1)
+            self.lut = pal[best].astype(np.uint8)
+            self.np = np
+        except Exception as e:  # noqa: BLE001
+            print("[paleta] sem numpy, usando modo simples:", e)
+
+    def apply(self, surf):
+        if self.np is not None:
+            try:
+                a = pygame.surfarray.pixels3d(surf)
+                idx = ((a[..., 0] >> 3).astype(self.np.int32) << 10) | ((a[..., 1] >> 3).astype(self.np.int32) << 5) | (a[..., 2] >> 3)
+                a[...] = self.lut[idx]
+                del a
+                return
+            except Exception:  # noqa: BLE001
+                self.np = None
+        if self.p8 is None or self.p8.get_size() != surf.get_size():
+            self.p8 = pygame.Surface(surf.get_size(), 0, 8)
+            self.p8.set_palette(self.colors)
+        self.p8.blit(surf, (0, 0))
+        surf.blit(self.p8, (0, 0))

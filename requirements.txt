@@ -1,3 +1,4 @@
 pygame-ce>=2.4
+numpy
 anthropic
 mcp>=1.2,<2

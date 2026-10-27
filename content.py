@@ -212,17 +212,17 @@ def auto_ending(history, used_names, rng=random):
 
 # ---------------------------------------------------------------- roupas (3 x 3 x 3 = 27)
 TOPS = [
-    {"name": "Moletom de Morango", "color": "#f08c88", "style": "hoodie"},
-    {"name": "Camisa Xadrez", "color": "#f6b26a", "style": "plaid"},
-    {"name": "Suéter de Tricô", "color": "#9fd3b4", "style": "sweater"},
+    {"name": "Moletom Azul + Manga Longa", "color": "#4a70b2", "style": "hoodie_blue"},
+    {"name": "Polo Listrada", "color": "#e2a096", "style": "rugby"},
+    {"name": "Jaqueta Cinza de Zíper", "color": "#b0acac", "style": "zip_grey"},
 ]
 BOTTOMS = [
-    {"name": "Jeans Clarinho", "color": "#94b6e2", "style": "pants"},
-    {"name": "Bermuda Cáqui", "color": "#dcb98a", "style": "shorts"},
-    {"name": "Calça de Veludo", "color": "#bd7a62", "style": "pants"},
+    {"name": "Bermuda Jeans Larga", "color": "#2e3a5c", "style": "denim_shorts"},
+    {"name": "Short de Moletom", "color": "#a8a6aa", "style": "sweat_shorts"},
+    {"name": "Calça Esportiva Larga", "color": "#484850", "style": "track_pants"},
 ]
 SHOES = [
-    {"name": "Tênis Branquinho", "color": "#fbf2e6", "style": "sneaker"},
-    {"name": "Botinha Marrom", "color": "#9c6648", "style": "boot"},
-    {"name": "Tênis Vermelho", "color": "#e6594f", "style": "sneaker"},
+    {"name": "Tênis Marinho + Meia", "color": "#2c3450", "style": "navy_sneaker"},
+    {"name": "Mocassim + Meião", "color": "#1e1a1e", "style": "loafer"},
+    {"name": "Tênis Bordô", "color": "#8a2832", "style": "burgundy_sneaker"},
 ]

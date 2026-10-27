@@ -395,11 +395,11 @@ class ChoicesScene(Scene):
             return
         if self.scene == "outside":
             if self.house_visible and not self.last_choice and math.hypot(p.x - DOOR_POS[0], p.y - DOOR_POS[1]) < 55:
-                art.prompt_bubble(self.screen, p.x, p.y - 66, "E  entrar", self.t)
+                art.prompt_bubble(self.screen, p.x, p.y - 96, "E  entrar", self.t)
             elif not self.house_visible and self.final_k > .9 and self.near_final():
-                art.prompt_bubble(self.screen, p.x, p.y - 66, "E  pegar", self.t)
+                art.prompt_bubble(self.screen, p.x, p.y - 96, "E  pegar", self.t)
         elif self.scene == "room" and self.near_pedestal() is not None:
-            art.prompt_bubble(self.screen, p.x, p.y - 66, "E  examinar", self.t)
+            art.prompt_bubble(self.screen, p.x, p.y - 96, "E  examinar", self.t)
 
     def draw_outside(self):
         self.draw_field()
@@ -588,15 +588,15 @@ class ChoicesScene(Scene):
         elif sc == "ending_no":
             self.no_art()
         if sc in ("showcase", "offer"):
-            pixel.pixelate(s)
+            pixel.pixelate(s, grade=True)
             self.showcase_art()
-        pixel.pixelate(s)
+        pixel.pixelate(s, grade=sc not in ("showcase", "offer"))
         if self.want_shatter:  # tira uma 'foto' da cena e quebra ela em pedaços
             self.want_shatter = False
             self.after_snapshot(s.copy())
             self.particles.p.clear()
             self.draw_field()
-            pixel.pixelate(s)
+            pixel.pixelate(s, grade=True)
         if self.shatter:
             self.shatter.draw(s)
         if self.flash > 0:

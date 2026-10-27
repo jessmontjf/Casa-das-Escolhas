@@ -920,127 +920,226 @@ HOUSE_SIZE = (280, 210)
 DOOR_POS = (W // 2, 272)
 HOUSE_BLOCK = pygame.Rect(W // 2 - 125, 160, 250, 108)
 FINAL_POS = (W - 120, H - 120)
-FIELD_BOUNDS = pygame.Rect(60, 108, W - 120, H - 112)
+FIELD_BOUNDS = pygame.Rect(15, 105, W - 30, H - 110)
 GRASS = pixel.GRASS[1]
+RIVER_X = (18, 44)            # riacho (pixel de mundo)
+BRIDGE_Y = (98, 116)
+
+
+def _fence(s, x0, y0, x1, y1, posts=6):
+    """Cerca de madeira (retângulo aberto embaixo no meio, se quiser portão)."""
+    wood, dk = (150, 99, 66), (88, 50, 31)
+    for y in (y0, y1):
+        pygame.draw.rect(s, dk, (x0, y + 2, x1 - x0, 2))
+        pygame.draw.rect(s, wood, (x0, y + 1, x1 - x0, 1))
+    for x in (x0, x1):
+        pygame.draw.rect(s, dk, (x, y0 + 2, 2, y1 - y0))
+    for x in range(x0, x1 + 1, posts):
+        for y in (y0, y1):
+            pygame.draw.rect(s, dk, (x, y - 2, 3, 7))
+            pygame.draw.rect(s, wood, (x, y - 2, 2, 6))
+            s.set_at((x, y - 2), (193, 124, 77))
+    for y in range(y0, y1 + 1, posts):
+        for x in (x0, x1):
+            pygame.draw.rect(s, dk, (x, y - 2, 3, 7))
+            pygame.draw.rect(s, wood, (x, y - 2, 2, 6))
+
+
+def pine_sprite(rng):
+    s = pygame.Surface((26, 40), pygame.SRCALPHA)
+    pygame.draw.rect(s, (106, 66, 32), (11, 32, 4, 8))
+    tiers = [(13, 2, 6), (13, 9, 9), (13, 17, 11), (13, 25, 12)]
+    for cx, cy, r in tiers:
+        pygame.draw.polygon(s, (52, 78, 58), [(cx - r, cy + 8), (cx + r, cy + 8), (cx, cy - 4)])
+        pygame.draw.polygon(s, (74, 104, 66), [(cx - r + 2, cy + 6), (cx + r - 3, cy + 6), (cx, cy - 3)])
+        pygame.draw.line(s, (102, 132, 76), (cx - 1, cy - 1), (cx - r + 4, cy + 5))
+    for _ in range(8):
+        x, y = rng.randrange(5, 21), rng.randrange(6, 32)
+        if s.get_at((x, y)).a:
+            s.set_at((x, y), (138, 160, 90))
+    return pixel.outline(s, (25, 16, 18))
 
 
 class Field:
-    """Clareira na floresta: grama em camadas, trilha, pedras, arbustos e uma
-    parede de árvores nas bordas (nenhum pedaço vazio)."""
+    """Clareira no estilo da referência: riacho com cascata, ponte de madeira,
+    caminho de terra, horta cercada, plantação de feno e poucas árvores."""
 
     def __init__(self, seed=11):
         rng = random.Random(seed)
         P = pixel.P
-        g = pygame.Surface((pixel.LW, pixel.LH))
-        pixel.paint_grass(g, g.get_rect(), rng)
-        dx0 = DOOR_POS[0] // P
-        for y in range(DOOR_POS[1] // P - 3, pixel.LH):                 # trilha de terra
-            w = 9 + int(2 * math.sin(y * .15))
-            cx = dx0 + int(4 * math.sin(y * .05))
-            pixel.paint_dirt(g, pygame.Rect(cx - w, y, w * 2, 1), rng)
-            for side in (cx - w, cx + w - 1):
-                if rng.random() < .35:
-                    pixel.tuft(g, side - 1, y, pixel.GRASS[3], rng.randint(0, 2))
+        LW, LH = pixel.LW, pixel.LH
+        g = pygame.Surface((LW, LH))
+        pixel.paint_grass(g, g.get_rect(), rng, .7,
+                          [(176, 186, 110), (120, 152, 88), (102, 132, 76), (74, 104, 66), (52, 78, 58)])
+        # ---- barranco do fundo (mato em cima, terra na frente)
+        pygame.draw.rect(g, (52, 78, 58), (0, 0, LW, 22))
+        for x in range(0, LW, 3):
+            h = 20 + rng.randint(0, 3)
+            pygame.draw.rect(g, (74, 104, 66), (x, h - 2, 3, 2))
+        pygame.draw.rect(g, (120, 86, 57), (0, 22, LW, 12))
+        for x in range(0, LW, 5):
+            pygame.draw.line(g, (88, 50, 31), (x, 24), (x + rng.randint(-1, 1), 33))
+        pygame.draw.rect(g, (64, 39, 28), (0, 33, LW, 2))
+        for x in range(0, LW, 4):
+            if rng.random() < .5:
+                g.set_at((x, 22), (102, 132, 76))
+        # ---- riacho com cascata
+        x0, x1 = RIVER_X
+        for y in range(0, LH):
+            wob = int(2 * math.sin(y * .08))
+            pygame.draw.rect(g, (60, 96, 120), (x0 + wob, y, x1 - x0, 1))
+            pygame.draw.rect(g, (44, 92, 86), (x0 + wob - 2, y, 2, 1))
+            pygame.draw.rect(g, (44, 92, 86), (x1 + wob, y, 2, 1))
+            if rng.random() < .25:
+                g.set_at((x0 + wob + rng.randrange(x1 - x0), y), (96, 140, 156))
+        for y in range(14, 36):
+            for x in range(x0 + 2, x1 - 2, 3):
+                g.set_at((x + (y // 2) % 2, y), (150, 190, 190) if (x + y) % 2 else (250, 240, 214))
+        for x in range(x0, x1, 2):
+            g.set_at((x, 36), (250, 240, 214))
+        # ---- caminhos de terra
+        door_x = DOOR_POS[0] // P
+        for y in range(DOOR_POS[1] // P - 2, LH):
+            w = 8 + int(math.sin(y * .2))
+            pixel.paint_dirt(g, pygame.Rect(door_x - w, y, w * 2, 1), rng, (219, 160, 109))
+        by0, by1 = BRIDGE_Y
+        for x in range(x1 + 2, 236):
+            w = 6 + int(math.sin(x * .17))
+            pixel.paint_dirt(g, pygame.Rect(x, (by0 + by1) // 2 - w, 1, w * 2), rng, (219, 160, 109))
+        for x in range(0, x0 - 2):
+            pixel.paint_dirt(g, pygame.Rect(x, (by0 + by1) // 2 - 6, 1, 12), rng, (219, 160, 109))
+        # ---- ponte de madeira
+        pygame.draw.rect(g, (88, 50, 31), (x0 - 6, by0, x1 - x0 + 12, by1 - by0))
+        for x in range(x0 - 5, x1 + 6, 4):
+            pygame.draw.rect(g, (159, 98, 59), (x, by0 + 1, 3, by1 - by0 - 2))
+            g.set_at((x, by0 + 2), (193, 124, 77))
+        for y in (by0 - 1, by1 - 2):
+            pygame.draw.rect(g, (120, 69, 36), (x0 - 7, y, x1 - x0 + 14, 2))
+            for x in range(x0 - 7, x1 + 8, 6):
+                pygame.draw.rect(g, (64, 39, 28), (x, y - 3, 3, 5))
+                pygame.draw.rect(g, (150, 99, 66), (x, y - 3, 2, 4))
+        # ---- horta cercada (direita)
+        hx0, hy0, hx1, hy1 = 236, 70, 304, 128
+        pygame.draw.rect(g, (135, 80, 52), (hx0 + 3, hy0 + 4, hx1 - hx0 - 4, hy1 - hy0 - 4))
+        for y in range(hy0 + 8, hy1 - 2, 10):
+            pygame.draw.rect(g, (101, 50, 33), (hx0 + 5, y + 4, hx1 - hx0 - 8, 2))
+            for x in range(hx0 + 9, hx1 - 4, 10):
+                pygame.draw.circle(g, (74, 104, 66), (x, y + 2), 3)
+                pygame.draw.circle(g, (138, 160, 90), (x - 1, y + 1), 2)
+                g.set_at((x, y + 2), (176, 186, 110))
+        _fence(g, hx0, hy0, hx1, hy1)
+        # ---- plantação de feno (embaixo, à esquerda)
+        fx0, fy0, fx1, fy1 = 64, 140, 132, 178
+        for y in range(fy0 + 4, fy1 - 2, 8):
+            for x in range(fx0 + 4, fx1 - 4, 10):
+                pygame.draw.rect(g, (178, 119, 80), (x, y + 6, 9, 2))
+                pygame.draw.rect(g, (221, 189, 138), (x, y, 9, 6))
+                for k in range(0, 9, 2):
+                    g.set_at((x + k, y + rng.randint(0, 4)), (252, 206, 120))
+        _fence(g, fx0, fy0, fx1, fy1)
         self.ground = pixel.up(g)
         self.sprites, self.blockers = [], []
+        S = lambda r: pygame.Rect(r[0] * P, r[1] * P, r[2] * P, r[3] * P)  # noqa: E731
+        self.blockers += [S((0, 0, LW, 35)),
+                          S((x0 - 4, 35, x1 - x0 + 8, by0 - 35 - 1)), S((x0 - 4, by1 + 1, x1 - x0 + 8, LH)),
+                          S((hx0, hy0 - 2, hx1 - hx0 + 3, hy1 - hy0 + 6)),
+                          S((fx0, fy0 - 2, fx1 - fx0 + 3, fy1 - fy0 + 6))]
 
         def add(img, x, y, block=None):
             self.sprites.append((y, img, (pixel.snap(x - img.get_width() / 2), pixel.snap(y - img.get_height()))))
             if block:
                 self.blockers.append(pygame.Rect(x - block[0] // 2, y - block[1], block[0], block[1]))
 
-        def tree(x, y, kind=None, block=True):
-            k = kind or rng.choice(["green", "green", "dark", "pink"])
-            add(pixel.up(pixel.tree_sprite(rng, k)), x, y + 6, (24, 16) if block else None)
-
-        # parede de árvores (fundo e laterais)
-        for x in range(-20, W + 40, 52):
-            tree(x + rng.randint(-8, 8), 70 + rng.randint(-10, 10), block=False)
-        for x in range(-10, W + 40, 64):
-            if not (290 < x < 670):
-                tree(x + rng.randint(-8, 8), 128 + rng.randint(-8, 8), block=False)
-        for y in range(170, H + 120, 62):
-            tree(18 + rng.randint(-8, 8), y, block=False)
-            tree(W - 18 + rng.randint(-8, 8), y, block=False)
-        for x in range(70, W - 60, 58):                                   # borda de baixo
-            if not (380 < x < 590) and not (x > 700):
-                tree(x + rng.randint(-6, 6), H + 105 + rng.randint(-6, 6), block=False)
-
-        def free(x, y, d, placed):
-            if pygame.Rect(300, 40, 360, 285).collidepoint(x, y):
-                return False
-            if abs(x - DOOR_POS[0]) < 80 and y > 250:
-                return False
-            if x > 720 and y > 400:
-                return False
-            return all(math.hypot(x - px, y - py) > d for px, py in placed)
-
-        placed = []
-        for _ in range(400):                                            # árvores soltas
-            if len(placed) >= 5:
-                break
-            x, y = rng.randint(110, W - 110), rng.randint(220, H - 60)
-            if free(x, y, 150, placed):
-                placed.append((x, y))
-                tree(x, y)
-        for _ in range(600):                                            # pedras, arbustos, tocos, cogumelos
-            if len(placed) >= 30:
-                break
-            x, y = rng.randint(90, W - 90), rng.randint(170, H - 30)
-            if not free(x, y, 62, placed):
-                continue
-            placed.append((x, y))
-            r = rng.random()
-            if r < .38:
-                add(pixel.up(pixel.bush_sprite(rng)), x, y, (54, 14))
-            elif r < .72:
-                img = pixel.up(pixel.rock_sprite(rng, rng.choice([.6, .8, 1.0, 1.3])))
-                add(img, x, y, (img.get_width() - 12, 14))
-            elif r < .82:
-                add(pixel.up(pixel.stump_sprite()), x, y, (36, 12))
-            else:
-                for k in range(rng.randint(2, 3)):
-                    add(pixel.up(pixel.mushroom_sprite(rng.choice([(240, 120, 110), (252, 200, 110)]))),
-                        x + k * 15, y + (k % 2) * 6)
-        for x, y in ((W - 200, H - 40), (W - 50, H - 220), (W - 240, H - 150), (W - 60, H - 40)):
-            add(pixel.up(pixel.bush_sprite(rng)), x, y, (54, 14))      # moldura florida do canto do item
-        add(pixel.up(pixel.rock_sprite(rng, 1.4)), W - 70, H - 120, (60, 14))
+        # árvores na medida certa (nada de excesso)
+        for x, y, kind in ((60, 30, "pine"), (140, 36, "round"), (290, 40, "pine"), (920, 40, "round"),
+                           (700, 42, "pine"), (580, 470, "round"), (300, 620, "pine"), (640, 610, "round"),
+                           (940, 300, "pine")):
+            img = pixel.up(pine_sprite(rng) if kind == "pine" else pixel.tree_sprite(rng, "dark"))
+            add(img, x, y + 6, (24, 15) if y > 120 else None)
+        # barris, caixotes de colheita, caixa de correio, tocos, pedras, flores
+        for k, (x, y) in enumerate(((300, 250), (330, 262))):
+            b = pygame.Surface((10, 12), pygame.SRCALPHA)
+            pygame.draw.rect(b, (145, 68, 39), (1, 0, 8, 12))
+            pygame.draw.rect(b, (88, 50, 31), (0, 2, 10, 1))
+            pygame.draw.rect(b, (88, 50, 31), (0, 8, 10, 1))
+            pygame.draw.ellipse(b, (178, 119, 80), (1, 0, 8, 3))
+            add(pixel.up(pixel.outline(b, (25, 16, 18))), x, y, (24, 12))
+        for k, (x, c) in enumerate(((640, (214, 96, 62)), (672, (138, 160, 90)), (704, (176, 64, 48)))):
+            b = pygame.Surface((10, 9), pygame.SRCALPHA)
+            pygame.draw.rect(b, (159, 98, 59), (0, 3, 10, 6))
+            pygame.draw.rect(b, (106, 66, 32), (0, 5, 10, 1))
+            for i in range(4):
+                pygame.draw.circle(b, c, (2 + i * 2, 3), 2)
+            add(pixel.up(pixel.outline(b, (25, 16, 18))), x, 262, (28, 12))
+        mb = pygame.Surface((7, 13), pygame.SRCALPHA)
+        pygame.draw.rect(mb, (106, 66, 32), (3, 5, 2, 8))
+        pygame.draw.rect(mb, (240, 223, 171), (0, 0, 7, 6))
+        mb.set_at((6, 1), (176, 64, 48))
+        add(pixel.up(pixel.outline(mb, (25, 16, 18))), 600, 270, (18, 8))
+        for x, y in ((240, 330), (860, 420), (560, 600)):
+            add(pixel.up(pixel.stump_sprite()), x, y, (36, 12)) if rng.random() < .5 else \
+                add(pixel.up(pixel.rock_sprite(rng, .8)), x, y, (36, 12))
+        for x, y in ((380, 300), (560, 310), (420, 600), (760, 600), (W - 200, H - 40), (W - 50, H - 200),
+                     (W - 240, H - 150), (W - 60, H - 40), (170, 300)):
+            add(pixel.up(pixel.bush_sprite(rng)), x, y, (54, 12))
 
 
 def draw_house(surf, ox, oy, window_col, t):
-    wall, beam, roof = (255, 240, 222), (176, 116, 86), (236, 120, 110)
-    sh = pygame.Surface((300, 40), pygame.SRCALPHA)
-    pygame.draw.ellipse(sh, (0, 0, 0, 60), sh.get_rect())
-    surf.blit(sh, (ox - 10, oy + 192))
-    pygame.draw.rect(surf, (140, 120, 120), (ox + 200, oy + 10, 30, 60))
-    pygame.draw.rect(surf, wall, (ox + 20, oy + 80, 240, 130))
-    pygame.draw.rect(surf, darker(wall, .15), (ox + 20, oy + 80, 240, 130), 3)
-    for x in (ox + 20, ox + 255):
-        pygame.draw.rect(surf, beam, (x, oy + 80, 6, 130))
-    pygame.draw.rect(surf, beam, (ox + 20, oy + 140, 240, 6))
-    pygame.draw.polygon(surf, darker(roof, .25), [(ox - 6, oy + 92), (ox + 140, oy - 2), (ox + 286, oy + 92)])
-    pygame.draw.polygon(surf, roof, [(ox, oy + 86), (ox + 140, oy + 4), (ox + 280, oy + 86)])
-    for k in range(1, 5):
-        y = oy + 4 + k * 18
-        half = (y - oy - 4) / 82 * 140
-        pygame.draw.line(surf, darker(roof, .15), (ox + 140 - half, y), (ox + 140 + half, y), 2)
-    pygame.draw.circle(surf, window_col, (ox + 140, oy + 50), 14)
-    pygame.draw.circle(surf, beam, (ox + 140, oy + 50), 14, 3)
-    pulse = .5 + .25 * math.sin(t * 2)
-    for wx in (ox + 46, ox + 190):
-        pygame.draw.rect(surf, window_col, (wx, oy + 100, 44, 40))
-        pygame.draw.rect(surf, beam, (wx, oy + 100, 44, 40), 4)
-        pygame.draw.line(surf, beam, (wx + 22, oy + 100), (wx + 22, oy + 140), 3)
-        pygame.draw.line(surf, beam, (wx, oy + 120), (wx + 44, oy + 120), 3)
-        pygame.draw.rect(surf, (140, 90, 60), (wx - 4, oy + 142, 52, 10))
-        for k in range(5):
-            pygame.draw.circle(surf, [(255, 120, 170), (255, 220, 90), (190, 140, 255)][k % 3], (wx + 3 + k * 10, oy + 141), 4)
-        blit_glow(surf, (wx + 22, oy + 120), 48, window_col, pulse * .5)
-    door = pygame.Rect(ox + 118, oy + 142, 44, 68)
-    pygame.draw.rect(surf, (120, 76, 52), door, border_top_left_radius=22, border_top_right_radius=22)
-    pygame.draw.rect(surf, (90, 56, 38), door, 3, border_top_left_radius=22, border_top_right_radius=22)
-    pygame.draw.line(surf, (90, 56, 38), (door.centerx, door.top + 8), (door.centerx, door.bottom), 2)
-    pygame.draw.circle(surf, (240, 200, 90), (door.right - 9, door.centery + 6), 4)
+    """Casa de enxaimel com telhado de telhas verde-escuras (estilo da referência)."""
+    key = ("house", tuple(window_col))
+    if key not in _house_cache:
+        if len(_house_cache) > 20:
+            _house_cache.clear()
+        s = pygame.Surface((94, 72), pygame.SRCALPHA)
+        wall, beam, dk = (240, 223, 171), (120, 69, 36), (64, 39, 28)
+        roof, roof_d, roof_l = (44, 92, 86), (25, 58, 52), (70, 124, 110)
+        pygame.draw.rect(s, (25, 16, 18, 90), (6, 66, 84, 6))                    # sombra
+        pygame.draw.rect(s, wall, (11, 36, 72, 34))                              # paredes
+        for x in (11, 46, 81):
+            pygame.draw.rect(s, beam, (x, 36, 3, 34))
+        pygame.draw.rect(s, beam, (11, 50, 72, 2))
+        pygame.draw.line(s, beam, (14, 52), (26, 68))
+        pygame.draw.line(s, beam, (80, 52), (68, 68))
+        pts = [(2, 40), (24, 2), (70, 2), (92, 40)]                              # telhado
+        pygame.draw.polygon(s, roof, pts)
+        for y in range(5, 40, 4):
+            k = (y - 2) / 38
+            xa, xb = 24 - 22 * k, 70 + 22 * k
+            pygame.draw.line(s, roof_d, (xa, y), (xb, y))
+            for x in range(int(xa) + (y // 4 % 2) * 3, int(xb), 6):
+                s.set_at((x, y - 1), roof_d)
+                s.set_at((x + 1, y - 2), roof_l)
+        pygame.draw.polygon(s, dk, pts, 1)
+        pygame.draw.rect(s, beam, (45, 0, 4, 40))                                # cumeeira
+        pygame.draw.rect(s, (193, 124, 77), (45, 0, 1, 40))
+        pygame.draw.polygon(s, wall, [(33, 40), (47, 22), (61, 40)])             # oitão
+        pygame.draw.line(s, beam, (33, 40), (47, 22), 2)
+        pygame.draw.line(s, beam, (61, 40), (47, 22), 2)
+        pygame.draw.circle(s, window_col, (47, 33), 3)
+        pygame.draw.circle(s, beam, (47, 33), 3, 1)
+        door = pygame.Rect(40, 52, 14, 18)                                       # porta arredondada
+        pygame.draw.rect(s, (135, 80, 52), door.inflate(2, 0))
+        pygame.draw.ellipse(s, (135, 80, 52), (39, 48, 16, 9))
+        for x in range(42, 54, 3):
+            pygame.draw.line(s, (101, 50, 33), (x, 50), (x, 69))
+        s.set_at((51, 61), (252, 206, 120))
+        for wx in (20, 63):                                                      # janelas
+            pygame.draw.rect(s, beam, (wx - 1, 40, 13, 11))
+            pygame.draw.rect(s, window_col, (wx, 41, 11, 9))
+            pygame.draw.line(s, beam, (wx + 5, 41), (wx + 5, 49))
+            pygame.draw.line(s, beam, (wx, 45), (wx + 10, 45))
+            pygame.draw.rect(s, (106, 66, 32), (wx - 1, 51, 13, 2))
+            for k in range(5):
+                s.set_at((wx + k * 2 + 1, 50), [(214, 96, 62), (252, 206, 120), (206, 140, 130)][k % 3])
+        for x in (8, 84):                                                        # arbustinhos
+            pygame.draw.circle(s, (74, 104, 66), (x, 66), 5)
+            pygame.draw.circle(s, (102, 132, 76), (x - 1, 65), 3)
+        _house_cache[key] = pixel.up(pixel.outline(s, (25, 16, 18)))
+    surf.blit(_house_cache[key], (pixel.snap(ox), pixel.snap(oy)))
+    blit_glow(surf, (ox + 47 * 3, oy + 45 * 3), 60, window_col, .25 + .1 * math.sin(t * 2))
+
+
+_house_cache = {}
 
 
 def house_surface(window_col, t):
@@ -1050,219 +1149,45 @@ def house_surface(window_col, t):
 
 
 DEFAULT_LOOK = {
-    "skin": (248, 208, 174), "hair": (124, 76, 56), "hair_style": "short",
-    "top": {"color": (190, 172, 232), "style": "pajama"},
-    "bottom": {"color": (190, 172, 232), "style": "pajama"},
-    "shoes": {"color": (255, 232, 214), "style": "slipper"},
+    "skin": (236, 184, 142), "hair": (161, 122, 86), "hair_style": "bob",
+    "top": {"color": (186, 150, 196), "style": "pajama"},
+    "bottom": {"color": (186, 150, 196), "style": "pajama"},
+    "shoes": {"color": (250, 236, 214), "style": "slipper"},
 }
 
 
-def _shade(c, k):
-    return darker(c, k) if k > 0 else lighter(c, -k)
+def char_mult(scale):
+    """Quanto ampliar o sprite (sempre múltiplo da grade de pixels)."""
+    return pixel.P if scale < 2.2 else pixel.P * max(2, round(scale / 1.5))
 
 
-class _Pen:
-    """Desenha com coordenadas 'base' multiplicadas por k (pra ficar nítido em close)."""
-
-    def __init__(self, S, k):
-        self.S, self.k = S, k
-
-    def _p(self, p):
-        return (round(p[0] * self.k), round(p[1] * self.k))
-
-    def _r(self, r):
-        x, y, w, h = r
-        k = self.k
-        return pygame.Rect(round(x * k), round(y * k), max(1, round(w * k)), max(1, round(h * k)))
-
-    def _w(self, w):
-        return max(1, round(w * self.k)) if w else 0
-
-    def rect(self, c, r, width=0, border_radius=0):
-        pygame.draw.rect(self.S, c, self._r(r), self._w(width), border_radius=int(border_radius * self.k))
-
-    def circle(self, c, p, r, width=0):
-        rk = r * self.k
-        if rk < 1.2:
-            x, y = self._p(p)
-            pygame.draw.rect(self.S, c, (x - (1 if rk > .9 else 0), y, 1 + (1 if rk > .9 else 0), 1))
-            return
-        pygame.draw.circle(self.S, c, self._p(p), rk, self._w(width))
-
-    def line(self, c, a, b, width=1):
-        pygame.draw.line(self.S, c, self._p(a), self._p(b), self._w(width))
-
-    def lines(self, c, closed, pts, width=1):
-        pygame.draw.lines(self.S, c, closed, [self._p(p) for p in pts], self._w(width))
-
-    def polygon(self, c, pts, width=0):
-        pygame.draw.polygon(self.S, c, [self._p(p) for p in pts], self._w(width))
-
-    def ellipse(self, c, r, width=0):
-        pygame.draw.ellipse(self.S, c, self._r(r), self._w(width))
-
-    def arc(self, c, r, a0, a1, width=1):
-        pygame.draw.arc(self.S, c, self._r(r), a0, a1, self._w(width))
+def char_height(scale):
+    return 30 * char_mult(scale)
 
 
 def draw_character(surf, x, y, facing="down", phase=0.0, moving=False, look=None,
                    scale=1.0, pose="stand", eyes="open", sprite_hook=True):
-    """Personagem em camadas (corpo + parte de cima + parte de baixo + sapatos).
-    (x, y) = ponto entre os pés. Se existirem sprites em assets/, usa elas."""
+    """Desenha o personagem (sprite 4 direções × 3 quadros). (x, y) = entre os pés.
+    Se existirem sprites em assets/ (player_walk_down.png etc.), usa elas."""
+    import sprites
     look = look or DEFAULT_LOOK
-    if not pose.startswith("sit"):
-        sw_ = int(28 * scale)
-        sh = pygame.Surface((pixel.snap(sw_) or 3, max(3, pixel.snap(8 * scale))), pygame.SRCALPHA)
-        notched(sh, sh.get_rect(), (90, 40, 40, 60))
-        surf.blit(sh, (pixel.snap(x - sh.get_width() / 2), pixel.snap(y - sh.get_height() / 2)))
+    m = char_mult(scale)
     if sprite_hook and look.get("sprite"):
         import assets
         fr = assets.frames(f"{look['sprite']}_{'walk' if moving else 'idle'}_{facing}")
         if fr:
             img = fr[int(phase / 2) % len(fr)] if moving else fr[0]
-            img = pygame.transform.smoothscale_by(img, scale) if scale != 1 else img
-            surf.blit(img, img.get_rect(midbottom=(int(x), int(y))))
+            img = pygame.transform.scale(img, (img.get_width() * m // 3, img.get_height() * m // 3))
+            surf.blit(img, img.get_rect(midbottom=(pixel.snap(x), pixel.snap(y))))
             return
-    K = scale / pixel.P                           # 1 px do sprite = 1 px do mundo
-    S = pygame.Surface((math.ceil(48 * K), math.ceil(78 * K)), pygame.SRCALPHA)
-    P = _Pen(S, K)
-    skin, hair = look["skin"], look["hair"]
-    top, bot, sho = look["top"], look["bottom"], look["shoes"]
-    tc, bc, sc = top["color"], bot["color"], sho["color"]
-    side = facing in ("left", "right")
-    sit = pose.startswith("sit")
-    pass  # a sombra é desenhada fora do sprite (pra não ganhar contorno)
-    swing = math.sin(phase) * 3 if moving else 0
-    bob = -abs(math.sin(phase)) * 2 if moving else 0
-    up = 8 if sit else 0                      # sentado: tronco desce
-
-    # ---------- pernas ----------
-    robe = top["style"] == "robe"
-    legs = [(17, swing), (25, -swing)] if not side else [(21, swing), (21, -swing)]
-    for lx, sw in legs:
-        lx = lx + (sw * .8 if side else 0)
-        y0 = 58 if sit else 51
-        ly = (0 if side else sw * .5)
-        if bot["style"] == "shorts":
-            P.rect(skin, (lx, y0 + ly, 6, 66 - y0))
-            P.rect(bc, (lx - 1, y0 + ly, 8, 6 if not sit else 3))
-        else:
-            P.rect(darker(bc, .08) if lx > 22 else bc, (lx, y0 + ly, 6, 66 - y0))
-            if bot["style"] == "pajama":
-                P.circle(lighter(bc, .45), (lx + 3, y0 + ly + 6), 1)
-        sh_y = 65 + ly
-        if sho["style"] == "boot":
-            P.rect(sc, (lx - 1, sh_y - 4, 8, 11), border_radius=2)
-            P.rect(darker(sc, .3), (lx - 1, sh_y + 5, 8, 2))
-        elif sho["style"] == "slipper":
-            P.ellipse(sc, (lx - 2, sh_y, 10, 7))
-            P.ellipse((255, 255, 255), (lx, sh_y + 1, 6, 3))
-        else:
-            P.rect(sc, (lx - 1, sh_y, 8 + (3 if side else 0), 6), border_radius=3)
-            P.rect(darker(sc, .25) if sum(sc) > 600 else lighter(sc, .5), (lx - 1, sh_y + 4, 8 + (3 if side else 0), 2))
-    if sit:  # coxas vindo pra frente (sentado na beira da cama)
-        P.rect(darker(bc, .05), (14, 54, 20, 7), border_radius=3)
-    # ---------- tronco ----------
-    ty = 31 + bob + up
-    body = pygame.Rect(14, ty, 20, 23 if not robe else 31)
-    if robe:
-        P.polygon(tc, [(14, ty + 3), (34, ty + 3), (36, ty + 32), (12, ty + 32)])
-    P.rect(tc, body, border_radius=6)
-    st = top["style"]
-    if st == "hoodie":
-        P.arc(darker(tc, .2), (14, ty - 4, 20, 12), math.pi, TAU, 3)
-        if facing != "up":
-            P.rect(lighter(tc, .2), (18, ty + 13, 12, 7), border_radius=3)
-            if not side:
-                P.line((255, 255, 255), (21, ty + 2), (21, ty + 8), 1)
-                P.line((255, 255, 255), (27, ty + 2), (27, ty + 8), 1)
-    elif st == "plaid":
-        for k in range(16, 34, 5):
-            P.line(darker(tc, .22), (k, ty + 1), (k, ty + 22), 1)
-        for k in range(2, 22, 5):
-            P.line(lighter(tc, .25), (15, ty + k), (33, ty + k), 1)
-        if facing != "up":
-            P.polygon((255, 250, 240), [(20, ty), (28, ty), (24, ty + 5)])
-    elif st == "sweater":
-        for k in range(3):
-            P.line(darker(tc, .15), (15, ty + 19 + k * 1.5), (33, ty + 19 + k * 1.5), 1)
-        P.rect(darker(tc, .12), (19, ty - 1, 10, 4), border_radius=2)
-        if facing != "up":
-            P.circle(lighter(tc, .4), (24, ty + 10), 3)
-    elif st == "pajama":
-        for dx, dy in ((18, 6), (28, 9), (21, 15), (30, 18), (17, 19)):
-            P.circle(lighter(tc, .5), (dx, ty + dy), 1)
-        P.polygon(lighter(tc, .3), [(19, ty), (29, ty), (24, ty + 5)])
-    elif st == "robe":
-        if facing != "up":
-            P.polygon(skin, [(20, ty), (28, ty), (24, ty + 9)])
-            P.line(darker(tc, .15), (20, ty), (24, ty + 14), 2)
-            P.line(darker(tc, .15), (28, ty), (24, ty + 14), 2)
-        P.rect(darker(tc, .2), (14, ty + 14, 20, 3))
-    # ---------- braços ----------
-    arm_sw = -swing if moving else 0
-    if side:
-        P.rect(darker(tc, .1), (21 - arm_sw * .6, ty + 3, 6, 15), border_radius=3)
-        P.circle(skin, (24 - arm_sw * .6, ty + 19), 3)
-    else:
-        if pose == "belly":
-            for ax in (10, 32):
-                P.rect(darker(tc, .08), (ax, ty + 2, 6, 12), border_radius=3)
-            P.circle(skin, (20, ty + 15), 3)
-            P.circle(skin, (28, ty + 15), 3)
-        else:
-            P.rect(darker(tc, .08), (10, ty + 2 + arm_sw * .5, 5, 15), border_radius=3)
-            P.circle(skin, (12, ty + 18 + arm_sw * .5), 3)
-            if pose == "sit_rub":
-                P.line(darker(tc, .08), (33, ty + 4), (29, ty - 6), 5)
-                P.circle(skin, (28, ty - 8), 3)
-            else:
-                P.rect(darker(tc, .08), (33, ty + 2 - arm_sw * .5, 5, 15), border_radius=3)
-                P.circle(skin, (36, ty + 18 - arm_sw * .5), 3)
-    # ---------- cabeça ----------
-    hy = 18 + bob + up
-    hs = look.get("hair_style", "short")
-    if hs == "long":
-        P.rect(hair, (11, hy - 4, 26, 22), border_radius=8)
-    if facing == "up":
-        P.circle(hair, (24, hy), 12)
-        if hs == "bun":
-            P.circle(hair, (24, hy - 12), 5)
-    else:
-        P.circle(hair, (24, hy - 2), 12)
-        fx = {"left": -2, "right": 2}.get(facing, 0)
-        P.circle(skin, (24 + fx, hy + 2), 10)
-        # franja
-        for k in range(4):
-            P.circle(hair, (17 + k * 5 + fx, hy - 7), 4)
-        if hs == "bun":
-            P.circle(hair, (24, hy - 14), 5)
-        if hs == "cap":
-            P.rect(look.get("cap", CORAL), (12, hy - 13, 24, 8), border_radius=4)
-            P.rect(look.get("cap", CORAL), (12 + (6 if facing == "right" else -4 if facing == "left" else 4), hy - 7, 16, 3))
-        ink = (70, 42, 50)
-        ey = hy + 2
-        if side:
-            ex = 24 + fx + (5 if facing == "right" else -5)
-            P.circle(ink, (ex, ey), 2)
-            P.circle((250, 160, 160), (ex - (3 if facing == "right" else -3), ey + 4), 2)
-        else:
-            for ex in (20, 28):
-                if eyes == "closed":
-                    P.arc(ink, (ex - 3, ey - 2, 6, 4), math.pi, TAU, 1)
-                elif eyes == "happy":
-                    P.arc(ink, (ex - 3, ey - 1, 6, 5), 0, math.pi, 2)
-                elif eyes == "sleepy":
-                    P.line(ink, (ex - 2, ey), (ex + 2, ey), 2)
-                else:
-                    P.circle(ink, (ex, ey), 2)
-                    P.circle((255, 255, 255), (ex + 1, ey - 1), 1)
-            P.circle((250, 160, 160), (17, ey + 4), 2)
-            P.circle((250, 160, 160), (31, ey + 4), 2)
-            if eyes in ("happy",):
-                P.arc(ink, (21, ey + 2, 6, 5), math.pi, TAU, 1)
-    S = pixel.up(pixel.outline(S, (70, 40, 50)))
-    surf.blit(S, (pixel.snap(x - 24 * scale) - pixel.P, pixel.snap(y - 72 * scale) - pixel.P))
+    p = {"sit_rub": "rub", "sit": "sit", "belly": "belly"}.get(pose, "stand")
+    small = sprites.make(look, facing, sprites.frame_for(phase, moving), p, eyes)
+    if p not in ("sit", "rub"):
+        sh = pygame.Surface((pixel.snap(14 * m), max(3, pixel.snap(3 * m))), pygame.SRCALPHA)
+        notched(sh, sh.get_rect(), (25, 16, 18, 70))
+        surf.blit(sh, (pixel.snap(x - sh.get_width() / 2), pixel.snap(y - sh.get_height() / 2 - m)))
+    img = pygame.transform.scale(small, (small.get_width() * m, small.get_height() * m))
+    surf.blit(img, (pixel.snap(x - img.get_width() / 2), pixel.snap(y - img.get_height() + m)))
 
 
 def draw_mom(surf, cx, cy, size, t):

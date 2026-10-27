@@ -43,6 +43,7 @@ class App:
         self.audio = Audio(self.settings)
         import pixel
         self.crt = pixel.CRT()
+        pixel._palette()
         self._agent, self._agent_err = None, None
         threading.Thread(target=self._start_agent, daemon=True).start()
 

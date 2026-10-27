@@ -58,7 +58,7 @@ class Player:
                 self.x, self.y = nx, ny
 
     def head(self, cam_x=0):
-        return self.x - cam_x, self.y - 70 * self.scale
+        return self.x - cam_x, self.y - art.char_height(self.scale) + 6
 
     def draw(self, surf, cam_x=0):
         art.draw_character(surf, self.x - cam_x, self.y, self.facing, self.phase, self.moving,
@@ -180,7 +180,7 @@ class WorldScene(Scene):
         for _, fn in sorted(acts, key=lambda a: a[0]):
             fn()
         self.draw_fg(surf)
-        pixel.pixelate(surf)
+        pixel.pixelate(surf, grade=True)
         for x, y in self.arrows:
             ui.float_button(surf, x - self.cam_x, y, self.t)
         if not self.busy() and self.locked <= 0:

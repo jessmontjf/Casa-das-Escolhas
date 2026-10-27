@@ -20,17 +20,31 @@ def _cached(key, fn):
     return _cache[key]
 
 
-def _planks(s, rect, base, step=34):
-    pygame.draw.rect(s, base, rect)
-    rng = random.Random(rect.x + rect.y)
-    for i, y in enumerate(range(rect.top, rect.bottom, step)):
-        pygame.draw.line(s, darker(base, .12), (rect.left, y), (rect.right, y), 2)
-        off = (i % 2) * 90
-        for x in range(rect.left + off, rect.right, 180):
-            pygame.draw.line(s, darker(base, .1), (x, y), (x, y + step), 1)
-        for _ in range(6):
-            x = rng.randint(rect.left, rect.right)
-            pygame.draw.line(s, lighter(base, .08), (x, y + 8), (x + 30, y + 8), 1)
+def _planks(s, rect, base, step=None):
+    """Piso de tábuas (técnica da referência): linhas horizontais regulares,
+    emendas verticais espalhadas, algumas tábuas num 2º tom e frestas mais escuras."""
+    rng = random.Random(rect.x * 7 + rect.y)
+    P = pixel.P
+    w, h = rect.w // P + 1, rect.h // P + 1
+    t = pygame.Surface((w, h))
+    base = (196, 146, 112)           # madeira quente (depois da luz vira o marrom da paleta)
+    alt = pixel.mix(base, (193, 124, 77), .6)
+    gap = pixel.dark(base, .35)
+    line = pixel.dark(base, .2)
+    t.fill(base)
+    row_h = 7
+    for r, y in enumerate(range(0, h, row_h)):
+        x = -rng.randint(0, 30)
+        while x < w:
+            L = rng.randint(28, 64)
+            if rng.random() < .25:
+                pygame.draw.rect(t, alt, (x, y + 1, L, row_h - 1))
+            pygame.draw.line(t, gap, (x, y), (x, y + row_h - 1))
+            if rng.random() < .3:
+                t.set_at((x + rng.randint(3, max(4, L - 3)), y + rng.randint(2, row_h - 2)), line)
+            x += L
+        pygame.draw.line(t, gap if r % 3 == 0 else line, (0, y), (w, y))
+    s.blit(pixel.up(t), rect.topleft, pygame.Rect(0, 0, rect.w, rect.h))
 
 
 def _wall(s, rect, base, pattern="dots"):
@@ -62,7 +76,7 @@ def _wainscot(s, top, bottom, x0=0, x1=W):
 
 def _caps(s, openings=()):
     """Topo das paredes em tijolinho escuro (moldura do cômodo, estilo RPG)."""
-    cap, mort = (120, 72, 70), (96, 56, 58)
+    cap, mort = (25, 16, 18), (40, 28, 26)
     for r in ((0, 0, W, 15), (0, 0, 15, H), (W - 15, 0, 15, H), (0, H - 15, W, 15)):
         pygame.draw.rect(s, cap, r)
     for y in range(0, H, 9):
@@ -71,8 +85,10 @@ def _caps(s, openings=()):
                 if pygame.Rect(r).collidepoint(x, y):
                     pygame.draw.rect(s, mort, (x, y, 3, 9))
                     break
+    for r in ((15, 15, W - 30, 3), (15, 15, 3, H - 30), (W - 18, 15, 3, H - 30), (15, H - 18, W - 30, 3)):
+        pygame.draw.rect(s, (88, 50, 31), r)                         # rodapé de madeira
     for x0, x1 in openings:
-        pygame.draw.rect(s, (60, 36, 40), (x0, H - 15, x1 - x0, 15))
+        pygame.draw.rect(s, (106, 66, 32), (x0, H - 18, x1 - x0, 18))
 
 
 def _window(s, x, y, w, h, curtain=CORAL):
@@ -722,7 +738,7 @@ def cut_dressed(s, t, look):
     pygame.draw.ellipse(s, (232, 240, 246), (348, 58, 264, 484))
     pygame.draw.ellipse(s, (246, 250, 252), (380, 90, 80, 300))
     blit_glow(s, (480, 320), 230, (90, 60, 40), .6)
-    art.draw_character(s, 480, 500, "down", 0, False, look, 5.6, "stand", "happy", sprite_hook=False)
+    art.draw_character(s, 480, 480, "down", 0, False, look, 4.0, "stand", "happy", sprite_hook=False)
     for k in range(8):
         a = t * .8 + k * math.tau / 8
         sparkle(s, 480 + math.cos(a) * 250, 300 + math.sin(a) * 200, 6 + int(3 * math.sin(t * 4 + k)), BUTTER)

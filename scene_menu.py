@@ -366,7 +366,7 @@ class MenuScene(Scene):
         self.draw_mailbox(s)
         for i in range(3):
             self.draw_letter(s, i)
-        pixel.pixelate(s)
+        pixel.pixelate(s, grade=True)
         art.text(s, "A Casa das Escolhas", art.font(48, bold=True), INK, (W // 2, 12), "midtop", shadow=CREAM)
         self.draw_sub(s)
         for i in range(3):
