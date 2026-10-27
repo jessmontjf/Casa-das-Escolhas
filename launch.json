@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rodar jogo",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/game.py",
+      "console": "integratedTerminal",
+      "env": { "ANTHROPIC_API_KEY": "${env:ANTHROPIC_API_KEY}" }
+    },
+    {
+      "name": "Rodar jogo (ver palpites da IA no terminal)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/game.py",
+      "console": "integratedTerminal",
+      "env": { "ANTHROPIC_API_KEY": "${env:ANTHROPIC_API_KEY}", "DEBUG_IA": "1" }
+    }
+  ]
+}
